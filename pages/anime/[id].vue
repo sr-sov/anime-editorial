@@ -63,6 +63,13 @@ const cover = computed(() => {
     null
   )
 })
+// The JPG large image is the most universally crawlable OG card (some scrapers
+// reject webp), so SEO prefers jpg even when the on-page art uses webp.
+const ogImage = computed(() => {
+  const a = anime.value
+  if (!a) return null
+  return a.images.jpg.large_image_url ?? a.images.jpg.image_url ?? null
+})
 const englishTitle = computed(() => {
   const a = anime.value
   if (!a?.title_english || a.title_english === a.title) return null
@@ -76,18 +83,28 @@ const synopsis = computed(() => anime.value?.synopsis ?? '')
 // Gate the SplitText reveal until the record resolves (so it plays on open).
 const titleReady = computed(() => !pending.value && Boolean(anime.value))
 
-watchEffect(() => {
-  if (anime.value) {
-    useHead({
-      title: `${anime.value.title} · Reel`,
-      meta: [
-        {
-          name: 'description',
-          content: pullQuote(anime.value.synopsis, 150) || `${anime.value.title} on Reel.`,
-        },
-      ],
-    })
-  }
+// Per-title SEO, off the (server-fetched) API data. Computed getters keep this
+// reactive and SSR-safe: prerendered detail pages ship their OWN title,
+// description, and a per-title OG/Twitter card painted at build time.
+const metaTitle = computed(() =>
+  anime.value ? `${anime.value.title} · Reel` : 'Reel — The Anime Annual',
+)
+const metaDescription = computed(() =>
+  anime.value
+    ? pullQuote(anime.value.synopsis, 150) || `${anime.value.title} on Reel — the anime annual.`
+    : 'A film magazine for anime, built with Nuxt 3.',
+)
+useSeoMeta({
+  title: () => metaTitle.value,
+  description: () => metaDescription.value,
+  ogTitle: () => metaTitle.value,
+  ogDescription: () => metaDescription.value,
+  ogType: 'article',
+  ogImage: () => ogImage.value || undefined,
+  twitterCard: () => (ogImage.value ? 'summary_large_image' : 'summary'),
+  twitterTitle: () => metaTitle.value,
+  twitterDescription: () => metaDescription.value,
+  twitterImage: () => ogImage.value || undefined,
 })
 </script>
 
@@ -273,8 +290,10 @@ watchEffect(() => {
                 <div class="origin-center transition-transform duration-700 ease-house group-hover:scale-[1.05]">
                   <CoverImage
                     :src="rec.entry.images.webp?.large_image_url ?? rec.entry.images.jpg.image_url"
+                    :images="rec.entry.images"
                     :alt="`Cover art for ${rec.entry.title}`"
                     ratio="3 / 4"
+                    sizes="(min-width: 1024px) 16vw, (min-width: 640px) 33vw, 50vw"
                   />
                 </div>
               </div>

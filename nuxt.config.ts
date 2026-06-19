@@ -1,4 +1,25 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
+/**
+ * Detail routes to prerender. Seeded at build time by
+ * `scripts/seed-prerender-routes.mjs` (the top ~40 ids from Jikan) and committed
+ * as `prerender-routes.json` so the build is reproducible even if Jikan is down
+ * at deploy time. Missing/empty file -> shell-only prerender (the long tail
+ * stays SPA), never a build failure.
+ */
+function seededDetailRoutes(): string[] {
+  try {
+    const path = fileURLToPath(new URL('./prerender-routes.json', import.meta.url))
+    const routes = JSON.parse(readFileSync(path, 'utf8'))
+    return Array.isArray(routes) ? routes.filter((r) => typeof r === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+// https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-01-01',
   devtools: { enabled: true },
@@ -53,23 +74,24 @@ export default defineNuxtConfig({
   nitro: {
     preset: 'github-pages',
     prerender: {
-      // Pre-render the two STATIC route shells (the cover + the index) to real
-      // files, so a direct/cold load of either returns a true 200 — no SPA-
-      // fallback 404 in the console. The dynamic detail route (/anime/:id)
-      // can't be enumerated, so it resolves client-side via the 404.html SPA
-      // fallback; this also keeps the build independent of Jikan being up (and
-      // off its rate limit). Data is still fetched client-side on every page.
+      // Prerender the static shells (cover + index) AND the top ~40 detail
+      // routes seeded from Jikan (committed in prerender-routes.json, read at
+      // config-eval). Each prerendered detail page returns a real, server-
+      // painted 200 with its own title/OG card — fixing deep-links, SEO,
+      // social, and the mobile LCP. crawlLinks stays false so the long tail
+      // (every other /anime/:id) is served by the 404.html SPA fallback and
+      // hydrated against the live API.
       crawlLinks: false,
-      routes: ['/', '/browse'],
+      routes: ['/', '/browse', ...seededDetailRoutes()],
       failOnError: false,
     },
   },
 
-  // Data is fetched client-side from Jikan (see composables/useJikan.ts), so
-  // no server runtime is required at deploy time. The shell is pre-rendered for
-  // a fast first paint; dynamic routes are served by the SPA fallback and
-  // hydrate against the live API.
-  ssr: false,
+  // Server-render + prerender. The cover, index, and the top detail routes are
+  // painted on the server at build time; the long-tail detail route hydrates
+  // against the live API via the SPA fallback. Data flows through hydration-safe
+  // `useAsyncData` (return value IS the data — no setup-time side effects).
+  ssr: true,
 
   typescript: {
     strict: true,

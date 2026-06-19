@@ -40,24 +40,35 @@ const {
   { default: () => [] },
 )
 
-// The accumulating listing.
+// The accumulating listing. `data` is the raw page response (the asyncData
+// handler is PURE — it returns the fetched page and never mutates an external
+// ref, which is the hydration-safe pattern). Accumulation across pages is
+// derived in a watcher below, so SSR and client agree on the first page.
 const items = ref<Anime[]>([])
 const hasNextPage = ref(false)
 const loadingMore = ref(false)
 
-const { pending, error, refresh } = await useAsyncData(
+const { data, pending, error, refresh } = await useAsyncData(
   listKey,
-  async () => {
-    const res = isFiltering.value
-      ? await searchAnime({
+  () =>
+    isFiltering.value
+      ? searchAnime({
           q: trimmedQuery.value || undefined,
           genres: selectedGenre.value ? String(selectedGenre.value) : undefined,
           order_by: 'score',
           sort: 'desc',
           page: page.value,
         })
-      : await getTopAnime(page.value)
+      : getTopAnime(page.value),
+  { watch: [listKey] },
+)
 
+// Fold each resolved page into the running list. Page 1 (a new list key, or a
+// retry) replaces; later pages append, de-duped by mal_id.
+watch(
+  data,
+  (res) => {
+    if (!res) return
     hasNextPage.value = res.pagination.has_next_page
     if (page.value === 1) {
       items.value = res.data
@@ -65,9 +76,8 @@ const { pending, error, refresh } = await useAsyncData(
       const seen = new Set(items.value.map((a) => a.mal_id))
       items.value = [...items.value, ...res.data.filter((a) => !seen.has(a.mal_id))]
     }
-    return res.data
   },
-  { watch: [listKey] },
+  { immediate: true },
 )
 
 async function loadMore() {
