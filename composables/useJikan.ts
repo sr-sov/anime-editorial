@@ -42,8 +42,15 @@ export function buildCacheKey(
   return qs ? `${path}?${qs}` : path
 }
 
-/** Minimum spacing between outbound requests. ~3 req/s -> ~334ms; we pad it. */
-const MIN_REQUEST_SPACING_MS = 360
+/**
+ * Minimum spacing between outbound requests. Jikan documents ~3 req/s but ALSO
+ * enforces a ~60/min ceiling with burst detection. In the browser the user
+ * never bursts 40 requests, so the tight ~3 req/s pace is right. During SSR /
+ * prerender we fan out the whole top-40 in one process, which trips the burst
+ * limiter (429), so we pace much more conservatively there.
+ */
+const isServer = typeof window === 'undefined'
+const MIN_REQUEST_SPACING_MS = isServer ? 900 : 360
 let lastRequestAt = 0
 let queueTail: Promise<void> = Promise.resolve()
 
@@ -81,18 +88,40 @@ export function useJikan() {
       return cache.get(key) as T
     }
 
-    await scheduleSlot()
-
-    const result = await $fetch<T>(`${base}${path}`, {
-      // $fetch serializes params and drops undefined values for us.
-      query: params,
-      retry: 1,
-      retryDelay: 600,
-      timeout: 12_000,
-    })
-
-    cache.set(key, result)
-    return result
+    // Jikan's burst limiter (429) is the one failure that actually shows up,
+    // especially when prerender fans out the top-40. Retry it explicitly with
+    // exponential backoff, honoring Retry-After when present, so a prerendered
+    // detail page reliably gets its data instead of falling back to a skeleton.
+    const maxAttempts = isServer ? 5 : 2
+    let attempt = 0
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      await scheduleSlot()
+      try {
+        const result = await $fetch<T>(`${base}${path}`, {
+          // $fetch serializes params and drops undefined values for us.
+          query: params,
+          retry: 0, // we own the retry loop so we can back off on 429
+          timeout: 15_000,
+        })
+        cache.set(key, result)
+        return result
+      } catch (err: unknown) {
+        attempt += 1
+        const status = (err as { response?: { status?: number }; statusCode?: number })
+          ?.response?.status ?? (err as { statusCode?: number })?.statusCode
+        const retryable = status === 429 || status === 425 || status === undefined
+        if (!retryable || attempt >= maxAttempts) throw err
+        const retryAfter = Number(
+          (err as { response?: { headers?: { get?: (k: string) => string | null } } })
+            ?.response?.headers?.get?.('retry-after'),
+        )
+        const backoff = Number.isFinite(retryAfter) && retryAfter > 0
+          ? retryAfter * 1000
+          : Math.min(8000, 700 * 2 ** attempt)
+        await sleep(backoff)
+      }
+    }
   }
 
   // ---------------------------------------------------------------------
