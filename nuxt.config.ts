@@ -53,11 +53,14 @@ export default defineNuxtConfig({
   nitro: {
     preset: 'github-pages',
     prerender: {
-      // Pre-render only the shell. Detail routes resolve client-side via the
-      // 404.html SPA fallback, so the build never depends on Jikan being up
-      // (and we don't burn build-time requests against its rate limit).
+      // Pre-render the two STATIC route shells (the cover + the index) to real
+      // files, so a direct/cold load of either returns a true 200 — no SPA-
+      // fallback 404 in the console. The dynamic detail route (/anime/:id)
+      // can't be enumerated, so it resolves client-side via the 404.html SPA
+      // fallback; this also keeps the build independent of Jikan being up (and
+      // off its rate limit). Data is still fetched client-side on every page.
       crawlLinks: false,
-      routes: ['/'],
+      routes: ['/', '/browse'],
       failOnError: false,
     },
   },
