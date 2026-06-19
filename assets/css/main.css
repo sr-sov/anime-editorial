@@ -1,0 +1,157 @@
+/* Self-hosted variable fonts (vendored via @fontsource — no runtime CDN, no CLS). */
+@import '@fontsource-variable/fraunces/index.css';
+@import '@fontsource-variable/hanken-grotesk/index.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    /* The single house motion curve (L1 invariant 3). */
+    --ease-house: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    font-optical-sizing: auto;
+  }
+
+  body {
+    @apply bg-ink-900 text-bone-300 font-sans antialiased;
+    font-feature-settings: 'ss01', 'liga', 'kern';
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: rgba(216, 128, 74, 0.28);
+    color: #f6f1e7;
+  }
+
+  /* Visible, consistent focus ring for keyboard users across the app. */
+  :where(a, button, input, select, [tabindex]):focus-visible {
+    @apply outline-none ring-2 ring-ember-soft ring-offset-2 ring-offset-ink-900;
+    border-radius: 2px;
+  }
+
+  /* Honor reduced-motion FULLY: a real static state, not just a faster tween.
+     JS motion checks the same media query and renders the final frame. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Magazine measure: generous outer margin, content held to a column. */
+  .container-spread {
+    @apply mx-auto w-full max-w-[1400px] px-5 sm:px-8 lg:px-12;
+  }
+
+  /* The recurring section kicker: small all-caps mono, ember, tracked out. */
+  .kicker {
+    @apply font-mono text-[0.7rem] uppercase tracking-kicker text-ember;
+  }
+
+  /* Hairline rule used between editorial blocks. */
+  .rule {
+    @apply border-0 border-t border-ink-600;
+  }
+
+  /* Skeleton shimmer for loading states. */
+  .skeleton {
+    @apply relative overflow-hidden bg-ink-700;
+  }
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(246, 241, 231, 0.05),
+      transparent
+    );
+    animation: shimmer 1.6s infinite;
+  }
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  /* Cinematic image vignette used on cover plates. */
+  .plate-vignette::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(to top, rgba(11, 10, 9, 0.92) 0%, rgba(11, 10, 9, 0) 55%),
+      linear-gradient(to right, rgba(11, 10, 9, 0.55) 0%, rgba(11, 10, 9, 0) 45%);
+  }
+}
+
+/* ---- Scroll-reveal primitive (the deliberate motion moments use this) ----
+   Elements tagged [data-reveal] start translated + transparent; the
+   IntersectionObserver in useReveal adds .is-revealed. Reduced-motion users
+   get the revealed state immediately (no transition), via the block above. */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 0.9s var(--ease-house),
+    transform 0.9s var(--ease-house);
+  will-change: opacity, transform;
+}
+[data-reveal].is-revealed {
+  opacity: 1;
+  transform: none;
+}
+
+/* Page route transition: a slow editorial cross-dissolve (out-in). */
+.spread-enter-active,
+.spread-leave-active {
+  transition:
+    opacity 0.45s var(--ease-house),
+    transform 0.45s var(--ease-house);
+}
+.spread-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.spread-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+/* ---- Shared-element view transition (tile → spread) ----
+   The root snapshot cross-dissolves slowly and editorially; the named cover
+   pair (set in useSharedTransition) morphs position+size between the two
+   pages. We slow the morph to a confident, cinematic pace. */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-group(root) {
+    animation-duration: 0.5s;
+    animation-timing-function: var(--ease-house);
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.5s;
+    animation-timing-function: var(--ease-house);
+  }
+  /* The morphing cover plate: a touch slower, so the eye follows it. */
+  ::view-transition-group(.cover-shared) {
+    animation-duration: 0.62s;
+    animation-timing-function: var(--ease-house);
+  }
+}
+
