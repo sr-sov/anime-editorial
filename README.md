@@ -7,8 +7,11 @@ pull-quote synopsis, a typeset credits rail, an inline trailer, and cast.
 
 This is **Direction 1 — Editorial / Cinematic**, one of three premium frontends
 built on the same typed Jikan data layer. Data comes from the
-[Jikan API](https://jikan.moe) (the unofficial MyAnimeList REST API), fetched
-client-side so the whole thing ships as a static site.
+[Jikan API](https://jikan.moe) (the unofficial MyAnimeList REST API). The cover,
+the index, and the top ~40 detail pages are **server-rendered and prerendered at
+build time** (SSG), so deep links return real, crawlable 200s with per-title
+SEO/OG; the long tail hydrates client-side via the SPA fallback. It still ships
+as a fully static site (GitHub Pages, no server runtime).
 
 **Live:** https://sr-sov.github.io/anime-editorial/
 
@@ -46,7 +49,9 @@ Every motion path renders a real static state under `prefers-reduced-motion`
 
 ## Stack
 
-- **Nuxt 3** (Vue 3, `<script setup>` + Composition API), `ssr: false` static SPA
+- **Nuxt 3** (Vue 3, `<script setup>` + Composition API), `ssr: true` + SSG
+  prerender (top detail routes seeded from Jikan at build), SPA fallback for the
+  long tail
 - **TypeScript** in `strict` mode, typed Jikan response interfaces, typecheck-clean
 - **TailwindCSS** via `@nuxtjs/tailwindcss`, OKLCH-derived design tokens
 - **Jikan API v4** — no key, no auth
@@ -146,9 +151,12 @@ and a `404.html` SPA fallback). `npm run generate` produces a ready-to-publish
 
 ## Going further
 
-- **Nitro proxy + SSR** — a `server/api` proxy would move rate-limiting and
-  caching server-side and let the cover and detail pages render server-side for
-  crawlable, shareable spreads; the composable seam is already the right place.
+- **Nitro proxy** — a `server/api` proxy would move rate-limiting and caching
+  server-side (the SSR build already paces Jikan conservatively to dodge the
+  burst limiter during prerender); the composable seam is the right place.
+- **Wider prerender** — the seed currently captures the top ~40 ids; a fuller
+  build could enumerate every browsable id (the long tail already works via the
+  SPA fallback, this would just make more deep links crawlable).
 - **Issue archive** — the "Issue Nº" framing invites a real back-catalogue:
   seasonal archives addressable by `/issue/spring-2024`, generated at build time.
 
