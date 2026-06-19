@@ -24,8 +24,16 @@ const props = withDefaults(
     stagger?: number
     /** Delay before the first character, ms. */
     delay?: number
+    /**
+     * Play the entrance reveal on the FIRST client mount. Off by default: the
+     * title is a large LCP candidate, and animating it in from hidden delays
+     * Largest-Contentful-Paint. The reveal still plays on `text` changes (an
+     * in-session route navigation), where the View Transition already carries
+     * the drama. Opt in only for non-LCP decorative titles.
+     */
+    revealOnMount?: boolean
   }>(),
-  { as: 'h1', play: true, stagger: 26, delay: 0 },
+  { as: 'h1', play: true, stagger: 26, delay: 0, revealOnMount: false },
 )
 
 const { reduced } = useReducedMotion()
@@ -58,8 +66,9 @@ function reset() {
 
 onMounted(() => {
   animate.value = true
-  // Drop to the hidden state for one frame, then play the reveal on the client.
-  if (!reduced.value && props.play) {
+  // First mount: keep the server-painted title (LCP-fast) UNLESS the caller
+  // opts into an entrance reveal. Subsequent `text` changes always reveal.
+  if (props.revealOnMount && !reduced.value && props.play) {
     started.value = false
     nextTick(start)
   }
