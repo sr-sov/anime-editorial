@@ -25,3 +25,34 @@ jobs:
 
       - name: Unit tests
         run: npm test
+
+  # Builds the static site, then proves the two regressions the adversarial
+  # review flagged stay fixed: a directly-typed detail deep link returns a
+  # server-painted 200 with its OWN title/OG (not a 404 SPA shell), and the
+  # homepage + a detail page are axe-clean (WCAG 2a/2aa/21a/21aa) in a real
+  # headless browser. Failing either fails the build.
+  verify-dist:
+    name: Deep-link & a11y (axe) on the static build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium for headless axe + render checks
+        run: |
+          npx --yes @puppeteer/browsers install chrome@stable --path "$HOME/.cache/puppeteer" \
+            | tee /tmp/chrome-install.log
+          echo "CHROME_PATH=$(grep -oE '/[^ ]+/chrome' /tmp/chrome-install.log | tail -1)" >> "$GITHUB_ENV"
+
+      - name: Generate static site (SSG prerender)
+        run: npm run generate
+
+      - name: Verify deep-link 200 + own OG, and axe-clean overlays
+        run: npm run verify:dist

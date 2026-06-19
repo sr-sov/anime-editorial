@@ -7,17 +7,21 @@
   "scripts": {
     "dev": "nuxt dev",
     "build": "nuxt build",
-    "generate": "nuxt generate",
+    "seed:routes": "node scripts/seed-prerender-routes.mjs",
+    "generate": "node scripts/seed-prerender-routes.mjs && nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "verify:dist": "node scripts/verify-dist.mjs"
   },
   "devDependencies": {
     "@nuxtjs/tailwindcss": "6.14.0",
     "@types/node": "^26.0.0",
+    "axe-core": "^4.10.2",
     "nuxt": "3.21.8",
+    "puppeteer-core": "^23.11.1",
     "typescript": "5.9.3",
     "vitest": "^4.1.9",
     "vue-tsc": "2.2.12"
