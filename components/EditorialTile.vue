@@ -59,6 +59,7 @@ function onActivate(e: MouseEvent) {
   >
     <NuxtLink
       :to="to"
+      :aria-label="anime.title"
       class="block overflow-hidden rounded-[2px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember-soft focus-visible:ring-offset-2 focus-visible:ring-offset-ink-900"
       @click="onActivate"
     >
@@ -72,8 +73,10 @@ function onActivate(e: MouseEvent) {
         >
           <CoverImage
             :src="cover"
+            :images="anime.images"
             :alt="`Cover art for ${anime.title}`"
             :ratio="isFeature ? '4 / 5' : '3 / 4'"
+            :sizes="isFeature ? '(min-width: 640px) 60vw, 90vw' : '(min-width: 1024px) 30vw, (min-width: 640px) 45vw, 90vw'"
             :priority="priority"
           />
         </div>
@@ -87,13 +90,16 @@ function onActivate(e: MouseEvent) {
 
     <div :class="['mt-4', isFeature ? 'sm:mt-0' : '']">
       <p class="kicker">{{ lead }}</p>
+      <!-- One focusable link per tile (the cover plate above), so the ~30-tile
+           index keeps keyboard tab stops to one per entry. The heading is plain
+           text; the cover link is named by the title via its aria-label. -->
       <h3
         :class="[
           'mt-2 font-serif font-semibold leading-tight text-bone-100 transition-colors duration-300 group-hover:text-ember',
           isFeature ? 'text-3xl sm:text-4xl' : 'text-xl',
         ]"
       >
-        <NuxtLink :to="to" class="rounded-sm" @click="onActivate">{{ anime.title }}</NuxtLink>
+        {{ anime.title }}
       </h3>
 
       <p

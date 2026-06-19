@@ -39,15 +39,17 @@ onBeforeUnmount(() => {
     "
   >
     <div class="container-spread flex h-16 items-center justify-between">
-      <NuxtLink
-        to="/"
-        class="group flex items-baseline gap-2.5 rounded-sm"
-        aria-label="Reel — home"
-      >
+      <!-- No aria-label: the accessible name comes from the visible text
+           ("Reel The Anime Annual"), satisfying Label-in-Name (WCAG 2.5.3). The
+           "Annual" span is visually hidden on mobile but stays in the a11y tree
+           (sr-only) so the name is stable across breakpoints. -->
+      <NuxtLink to="/" class="group flex items-baseline gap-2.5 rounded-sm">
         <span class="font-serif text-2xl font-semibold tracking-tight text-bone-100">
           Reel
         </span>
-        <span class="hidden font-mono text-[0.62rem] uppercase tracking-kicker text-muted sm:inline">
+        <span
+          class="sr-only font-mono text-[0.62rem] uppercase tracking-kicker text-muted sm:not-sr-only"
+        >
           The Anime Annual
         </span>
       </NuxtLink>

@@ -42,11 +42,14 @@ const year = new Date().getFullYear()
           <p class="kicker">Colophon</p>
           <p class="mt-4 text-sm leading-relaxed text-muted">
             Data by the
+            <!-- Persistent underline so the inline link is distinguishable
+                 without relying on color alone (WCAG 1.4.1). Hover color is a
+                 layered enhancement, not the sole signal. -->
             <a
               href="https://jikan.moe"
               target="_blank"
               rel="noopener noreferrer"
-              class="rounded-sm text-bone-300 underline-offset-4 transition-colors hover:text-ember hover:underline"
+              class="rounded-sm text-bone-300 underline underline-offset-4 transition-colors hover:text-ember"
               >Jikan API</a
             >. Set in Fraunces &amp; Hanken Grotesk. Built with Nuxt 3.
           </p>
