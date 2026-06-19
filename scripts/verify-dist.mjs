@@ -123,6 +123,30 @@ async function main() {
   }
 
   const failures = []
+
+  // ---- 0. Font preloads must point at files that actually exist ----
+  // The font preloads in nuxt.config pin hashed filenames; if a dep bump
+  // rehashes them, the preload would 404 (dead weight + no LCP benefit). Assert
+  // every `rel="preload" as="font"` href resolves to a real file in the build.
+  {
+    const home = await readFile(join(DIST, 'index.html'), 'utf8')
+    const preloads = [...home.matchAll(/<link[^>]+rel="preload"[^>]+as="font"[^>]*>/g)]
+      .map((m) => m[0].match(/href="([^"]+)"/)?.[1])
+      .filter(Boolean)
+    if (preloads.length === 0) {
+      failures.push('No font preloads found in the cover HTML (expected Fraunces + Hanken).')
+    }
+    for (const href of preloads) {
+      const rel = href.replace(`${BASE}/`, '')
+      if (!existsSync(join(DIST, rel))) {
+        failures.push(`Preloaded font 404s: ${href} (hash drift — update nuxt.config).`)
+      }
+    }
+    if (preloads.length && !failures.length) {
+      console.log(`[verify-dist] ${preloads.length} font preload(s) resolve to real files ✓`)
+    }
+  }
+
   const { total, withSpread, goodId } = await surveyDetails()
   const detailId = goodId
 

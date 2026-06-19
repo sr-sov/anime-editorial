@@ -65,6 +65,26 @@ export default defineNuxtConfig({
         { rel: 'icon', type: 'image/x-icon', href: '/anime-editorial/favicon.ico' },
         { rel: 'icon', type: 'image/svg+xml', href: '/anime-editorial/favicon.svg' },
         { rel: 'apple-touch-icon', href: '/anime-editorial/apple-touch-icon.png' },
+        // Preload the two latin display/body fonts. They power the LCP title
+        // (Fraunces) and body (Hanken); without a preload the browser discovers
+        // them only after CSS parse, so the title swaps font late and LCP fires
+        // at the swap. The hashed names are stable (content hash) and pinned by
+        // the latin-only @import in main.css. crossorigin matches the font CORS
+        // mode so the preload is actually reused.
+        {
+          rel: 'preload',
+          as: 'font',
+          type: 'font/woff2',
+          href: '/anime-editorial/_nuxt/fraunces-latin-wght-normal.ukD16Tqj.woff2',
+          crossorigin: '',
+        },
+        {
+          rel: 'preload',
+          as: 'font',
+          type: 'font/woff2',
+          href: '/anime-editorial/_nuxt/hanken-grotesk-latin-wght-normal.CaVRRdDk.woff2',
+          crossorigin: '',
+        },
       ],
     },
   },
