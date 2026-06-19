@@ -1,0 +1,1 @@
+import{d as n,b as t,c,g as e,a3 as _,e as l,a4 as r,a5 as d}from"./DSR7tC4y.js";const m={class:"flex min-h-screen flex-col bg-ink-900"},f={class:"flex-1"},u=n({__name:"default",setup(i){return(s,p)=>{const a=_,o=d;return t(),c("div",m,[e(a),l("main",f,[r(s.$slots,"default")]),e(o)])}}});export{u as default};
