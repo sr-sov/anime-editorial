@@ -18,14 +18,17 @@ const { data, pending, error, refresh } = await useAsyncData(
   'cover',
   async () => {
     const [top, season] = await Promise.all([getTopAnime(1), getSeasonNow(1)])
-    return { top: top.data, season: season.data }
+    // Return ONLY what the cover renders (12 top + 6 season). Trimming here
+    // shrinks the inlined hydration payload that ships in the prerendered HTML
+    // — the full run is fetched fresh on /browse. The cap is a teaser by design.
+    return { top: top.data.slice(0, 12), season: season.data.slice(0, 6) }
   },
   { default: () => ({ top: [] as Anime[], season: [] as Anime[] }) },
 )
 
-// The cover star is the top-ranked title; the running order is the rest.
+// The cover star is the top-ranked title; the running order is the teaser rest.
 const featured = computed<Anime | null>(() => data.value.top[0] ?? null)
-const runningOrder = computed(() => data.value.top.slice(1))
+const runningOrder = computed(() => data.value.top.slice(1, 12))
 const nowShowing = computed(() => data.value.season.slice(0, 6))
 
 const showLoading = computed(() => pending.value && !featured.value)
@@ -67,7 +70,7 @@ useHead({
     <!-- 2 · Now Showing — the current season -->
     <section
       v-if="nowShowing.length"
-      class="container-spread mt-28"
+      class="cv-section container-spread mt-28"
       aria-labelledby="now-showing"
     >
       <header class="mb-12 flex items-end justify-between gap-6 border-b border-ink-600 pb-6">
@@ -85,13 +88,17 @@ useHead({
         </p>
       </header>
 
-      <EditorialGrid :items="nowShowing" lead-feature />
+      <!-- Below the fold: server-rendered for SEO/LCP, but client hydration is
+           DEFERRED until the grid scrolls into view (Nuxt lazy hydration ->
+           IntersectionObserver). This removes the ~2.4s synchronous hydration
+           long task that burned mobile TBT, without losing the painted markup. -->
+      <LazyEditorialGrid :items="nowShowing" lead-feature hydrate-on-visible />
     </section>
 
     <!-- 3 · The Running Order — all-time top titles -->
     <section
       v-if="runningOrder.length"
-      class="container-spread mt-32"
+      class="cv-section container-spread mt-32"
       aria-labelledby="running-order"
     >
       <header class="mb-12 flex items-end justify-between gap-6 border-b border-ink-600 pb-6">
@@ -113,7 +120,7 @@ useHead({
         </NuxtLink>
       </header>
 
-      <EditorialGrid :items="runningOrder" :start-index="1" />
+      <LazyEditorialGrid :items="runningOrder" :start-index="1" hydrate-on-visible />
 
       <div class="mt-16 flex justify-center sm:hidden">
         <NuxtLink

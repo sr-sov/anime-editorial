@@ -36,13 +36,33 @@ export function useParallax(speed = 0.12): { target: Ref<HTMLElement | null> } {
     frame = requestAnimationFrame(apply)
   }
 
-  onMounted(() => {
-    if (reduced.value) return
+  let attached = false
+  let idle = 0
+  function attach() {
+    if (attached || reduced.value) return
+    attached = true
     window.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('resize', onScroll, { passive: true })
     apply()
+  }
+
+  onMounted(() => {
+    if (reduced.value) return
+    // Gate the scroll listener until AFTER first paint so the parallax never
+    // competes with hydration/LCP work on the critical path. requestIdleCallback
+    // where available; a rAF fallback otherwise.
+    const ric = (window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number
+    }).requestIdleCallback
+    if (ric) idle = ric(attach, { timeout: 1200 })
+    else idle = requestAnimationFrame(() => requestAnimationFrame(attach))
   })
   onBeforeUnmount(() => {
+    const cic = (window as Window & {
+      cancelIdleCallback?: (h: number) => void
+    }).cancelIdleCallback
+    if (cic) cic(idle)
+    else cancelAnimationFrame(idle)
     window.removeEventListener('scroll', onScroll)
     window.removeEventListener('resize', onScroll)
     cancelAnimationFrame(frame)

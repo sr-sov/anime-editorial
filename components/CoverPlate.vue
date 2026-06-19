@@ -25,6 +25,16 @@ const cover = computed(
     props.anime.images.jpg.image_url ??
     null,
 )
+
+// Preload the hero plate (the LCP candidate) so the browser starts fetching it
+// from the prerendered HTML, not after parse+hydration. Emitted server-side, so
+// the static cover page ships the correct per-issue URL.
+useHead({
+  link: cover.value
+    ? [{ rel: 'preload', as: 'image', href: cover.value, fetchpriority: 'high' }]
+    : [],
+})
+
 const studio = computed(() => props.anime.studios?.[0]?.name ?? null)
 // Play the title reveal once the artwork has decoded (no pop-in race).
 const play = computed(() => mounted.value && decoded.value)
@@ -56,7 +66,7 @@ onMounted(() => {
       <div ref="parallaxEl" class="absolute inset-0 will-change-transform">
         <div
           class="plate-mask absolute inset-0"
-          :class="{ 'plate-mask--in': decoded }"
+          :class="{ 'plate-mask--in': decoded, 'plate-mask--animate': mounted }"
         >
           <img
             v-if="cover"
@@ -146,15 +156,21 @@ onMounted(() => {
 
 <style scoped>
 /* The masked image reveal: the plate wipes up from black, then the parallax
-   takes over. clip-path animates on the compositor; no layout cost. */
+   takes over. clip-path animates on the compositor; no layout cost.
+   The hidden start state applies ONLY once the client mounts (.plate-mask--
+   animate), so the server-painted hero is fully visible for first-paint LCP. */
 .plate-mask {
+  clip-path: inset(0 0 0 0);
+  transform: scale(1);
+}
+.plate-mask--animate {
   clip-path: inset(100% 0 0 0);
   transform: scale(1.08);
   transition:
     clip-path 1.3s var(--ease-house),
     transform 1.6s var(--ease-house);
 }
-.plate-mask--in {
+.plate-mask--animate.plate-mask--in {
   clip-path: inset(0 0 0 0);
   transform: scale(1);
 }

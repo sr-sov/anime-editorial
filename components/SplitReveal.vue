@@ -29,7 +29,12 @@ const props = withDefaults(
 )
 
 const { reduced } = useReducedMotion()
-const started = ref(false)
+// SSR/SEO/LCP: the server (and the first client frame, pre-mount) paints the
+// FINAL, visible title — never an opacity:0 heading that would tank LCP and
+// hide text from crawlers. The glyph-stagger animation is layered on only after
+// the component mounts on the client, by flipping `animate` true.
+const animate = ref(false)
+const started = ref(true)
 const words = computed(() => splitWords(props.text))
 
 function start() {
@@ -46,26 +51,36 @@ function start() {
 }
 
 function reset() {
+  if (!animate.value) return // pre-mount: stay in the painted final state
   started.value = false
   nextTick(start)
 }
 
 onMounted(() => {
-  if (props.play) start()
+  animate.value = true
+  // Drop to the hidden state for one frame, then play the reveal on the client.
+  if (!reduced.value && props.play) {
+    started.value = false
+    nextTick(start)
+  }
 })
 
 watch(
   () => props.play,
   (v) => {
-    if (v && !started.value) start()
+    if (v && animate.value && !started.value) start()
   },
 )
 watch(() => props.text, reset)
 </script>
 
 <template>
-  <component :is="as" class="split" :class="{ 'is-started': started }" :aria-label="text">
-    <span class="sr-only">{{ text }}</span>
+  <component
+    :is="as"
+    class="split"
+    :class="{ 'is-started': started, 'is-animate': animate }"
+    :aria-label="text"
+  >
     <span aria-hidden="true" class="split__words">
       <span v-for="(word, wi) in words" :key="`${wi}-${word.chars.length}`" class="split__word">
         <span
@@ -100,6 +115,10 @@ watch(() => props.text, reset)
 }
 .split__char {
   display: inline-block;
+}
+/* Hidden initial state applies ONLY once the client takes over (.is-animate),
+   so the server-painted title is fully visible for LCP/SEO. */
+.is-animate .split__char {
   transform: translateY(110%);
   opacity: 0;
   transition:
@@ -107,7 +126,7 @@ watch(() => props.text, reset)
     opacity 0.92s var(--ease-house);
   will-change: transform, opacity;
 }
-.is-started .split__char {
+.is-animate.is-started .split__char {
   transform: translateY(0);
   opacity: 1;
 }
@@ -119,17 +138,5 @@ watch(() => props.text, reset)
     transform: none !important;
     opacity: 1 !important;
   }
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
 }
 </style>
