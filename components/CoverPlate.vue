@@ -17,6 +17,12 @@ const { target: parallaxEl } = useParallax(0.14)
 
 const decoded = ref(false)
 const mounted = ref(false)
+// The masked image wipe is a client-only enhancement, but clipping the hero
+// (the LCP element) delays Largest-Contentful-Paint. So we only arm the wipe
+// when the image was NOT already painted by the server (i.e. a fresh client-
+// side navigation to the cover). On a cold/prerendered load the hero stays
+// fully painted -> fast LCP, and the parallax + entrance staggers carry motion.
+const armWipe = ref(false)
 
 const cover = computed(
   () =>
@@ -50,6 +56,19 @@ onMounted(() => {
   mounted.value = true
   // If there is no artwork, don't block the title reveal on a decode.
   if (!cover.value) decoded.value = true
+  // Arm the masked wipe only when this is a client-side navigation (NOT the
+  // initial hydration of the prerendered cover), so cold-load LCP isn't held
+  // back by clipping the hero. `isHydrating` is true during first hydration.
+  const { isHydrating } = useNuxtApp()
+  if (!isHydrating) {
+    decoded.value = false
+    armWipe.value = true
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        decoded.value = true
+      }),
+    )
+  }
 })
 </script>
 
@@ -66,7 +85,7 @@ onMounted(() => {
       <div ref="parallaxEl" class="absolute inset-0 will-change-transform">
         <div
           class="plate-mask absolute inset-0"
-          :class="{ 'plate-mask--in': decoded, 'plate-mask--animate': mounted }"
+          :class="{ 'plate-mask--in': decoded, 'plate-mask--animate': armWipe }"
         >
           <img
             v-if="cover"
