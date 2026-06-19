@@ -1,0 +1,32 @@
+{
+  "name": "anime-editorial",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Reel — a film-magazine treatment of the anime catalogue. Nuxt 3, cinematic editorial direction.",
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxt typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@nuxtjs/tailwindcss": "6.14.0",
+    "@types/node": "^26.0.0",
+    "nuxt": "3.21.8",
+    "typescript": "5.9.3",
+    "vitest": "^4.1.9",
+    "vue-tsc": "2.2.12"
+  },
+  "dependencies": {
+    "@fontsource-variable/fraunces": "^5.2.9",
+    "@fontsource-variable/hanken-grotesk": "^5.2.8",
+    "@fontsource/ibm-plex-mono": "^5.2.7",
+    "vue": "3.5.34",
+    "vue-router": "4.5.1"
+  }
+}
